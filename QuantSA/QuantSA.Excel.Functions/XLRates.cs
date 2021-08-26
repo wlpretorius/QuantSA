@@ -15,6 +15,9 @@ using QuantSA.Shared.MarketObservables;
 using QuantSA.Shared.Primitives;
 using QuantSA.Valuation;
 using QuantSA.Valuation.Models.Rates;
+using QuantSA.Core.Products.SAMarket;
+using QuantSA.CoreExtensions.SAMarket;
+using QuantSA.Shared.Conventions.BusinessDay;
 
 namespace QuantSA.ExcelFunctions
 {
@@ -209,7 +212,7 @@ namespace QuantSA.ExcelFunctions
             var coordinator = new Coordinator(curveSim, new List<Simulator>(), 1);
 
             // Run the valuation
-            var value = coordinator.Value(new Product[] {swap}, valueDate);
+            var value = coordinator.Value(new Product[] { swap }, valueDate);
             return value;
         }
 
@@ -365,8 +368,138 @@ namespace QuantSA.ExcelFunctions
             var anchorDate = baseCurve.GetAnchorDate();
             var flatCurveRate = -Math.Log(baseCurve.GetDF(anchorDate.AddTenor(Tenor.FromYears(1))));
             var model = new HullWhite1F(baseCurve.GetCurrency(), meanReversion, flatVol, flatCurveRate, flatCurveRate,
-                new[] {forecastIndices});
+                new[] { forecastIndices });
             return model;
+        }
+
+
+        [QuantSAExcelFunction(
+            Description = "Create a ZAR asset swap based on an underlying bond and floating rate.",
+            Name = "QSA.CreateAssetSwap",
+            HasGeneratedVersion = true,
+            ExampleSheet = "ZARAssetSwap.xlsx",
+            Category = "QSA.Rates",
+            IsHidden = false,
+            HelpTopic = "")]
+        public static AssetSwap CreateAssetSwap(
+            [ExcelArgument(Description = "Is the fixed rate paid? Enter -1 for payFixed, 1 for receive fixed.")]
+            int payFixed,
+            [ExcelArgument(Description = "The settlement date of the underlying bond.")]
+            Date settleDate,
+            [ExcelArgument(Description = "The underlying bond.")]
+            BesaJseBond besaJseBond,
+            [ExcelArgument(Description = "The spread that will be added to the floating index.")]
+            double spread,
+            [ExcelArgument(Description = "The public holidays applicable to the swap cashflows dates.")]
+            Date[] zaHols,
+            [ExcelArgument(Description = "The dates of the forecast curve.")]
+            Date[] forecastCurveDates,
+            [ExcelArgument(Description = "The rates of the forecast curve.")]
+            double[] forecastCurveRates,
+            [ExcelArgument(Description = "The currency of the cashflows.")]
+            Currency currency,
+            [QuantSAExcelArgument(Description = "Floating rate index exchanged for fixed coupon rate", Default = "DEFAULT")]
+            FloatRateIndex index)
+        {
+            var zaCalendar = new Calendar("ZA", zaHols);
+            var unAdjTradeDate = settleDate.AddDays(-3);
+            var tradeDate = BusinessDayStore.ModifiedFollowing.Adjust(unAdjTradeDate, zaCalendar);
+
+            IFloatingRateSource forecastCurve = new ForecastCurve(tradeDate, index, forecastCurveDates, forecastCurveRates);
+
+            return AssetSwapEx.CreateAssetSwap(payFixed, besaJseBond, settleDate, index, spread, zaCalendar, currency, forecastCurve);
+        }
+
+
+        [QuantSAExcelFunction(
+           Description = "Generate the spread on the ZAR asset swap based on an underlying bond.",
+           Name = "QSA.ValueAssetSwapSpread",
+           HasGeneratedVersion = true,
+           ExampleSheet = "ZARAssetSwap.xlsx",
+           Category = "QSA.Rates",
+           IsHidden = false,
+           HelpTopic = "")]
+        public static double ValueAssetSwapSpread([ExcelArgument(Description = "The name of the swap.")]
+            AssetSwap assetSwap,
+            [ExcelArgument(Description = "The settlement date of the underlying bond.")]
+            Date settleDate,
+            [ExcelArgument(Description =
+                "The yield to maturity of the underlying bond.")]
+            double ytm,
+            [ExcelArgument(Description = "The dates of the discount curve.")]
+            Date[] discountCurveDates,
+            [ExcelArgument(Description = "The rates of the discount curve.")]
+            double[] discountCurveRates,
+            [ExcelArgument(Description = "The dates of the forecast curve.")]
+            Date[] forecastCurveDates,
+            [ExcelArgument(Description = "The rates of the forecast curve.")]
+            double[] forecastCurveRates)
+
+        {
+            var results = assetSwap.AssetSwapMeasures(settleDate, ytm, discountCurveDates, discountCurveRates, forecastCurveDates, forecastCurveRates);
+            var spread = Math.Round((double)results.GetScalar(AssetSwapEx.Keys.AssetSwapSpread), 9);
+            return spread;
+        }
+
+        [QuantSAExcelFunction(
+            Description = "Create a Besa JSE Bond.",
+            Name = "QSA.CreateBesaJSEBond",
+            HasGeneratedVersion = true,
+            ExampleSheet = "BesaJSEBond.xlsx",
+            Category = "QSA.SAMarket",
+            IsHidden = false,
+            HelpTopic = "")]
+
+        public static BesaJseBond CreateBesaJseBond(
+            [ExcelArgument(Description = "The maturity date of the bond.")]
+            Date maturityDate,
+            [ExcelArgument(Description = "The notional amount of the bond.")]
+            double notional,
+            [ExcelArgument(Description = "The annual coupon rate of the bond.")]
+            double annualCouponRate,
+            [ExcelArgument(Description = "The month the first bond coupon is paid.")]
+            int couponMonth1,
+            [ExcelArgument(Description = "The day the first bond coupon is paid.")]
+            int couponDay1,
+            [ExcelArgument(Description = "The month the second bond coupon is paid.")]
+            int couponMonth2,
+            [ExcelArgument(Description = "The day the second bond coupon is paid.")]
+            int couponDay2,
+            [ExcelArgument(Description = "The books close date days of the bond.")]
+            int bookscloseDateDays,
+            [ExcelArgument(Description = "The currency of the cashflows.")]
+            Currency currency)
+
+        {
+            return new BesaJseBond(maturityDate, notional, annualCouponRate, couponMonth1, couponDay1, couponMonth2, couponDay2, bookscloseDateDays,
+                new Calendar("ZA"), currency);
+        }
+
+        [QuantSAExcelFunction(
+            Description = "Returns all key output parameters of a Besa JSE Bond.",
+            Name = "QSA.BesaJseBondResults",
+            HasGeneratedVersion = true,
+            ExampleSheet = "BesaJSEBond.xlsx",
+            Category = "QSA.SAMarket",
+            IsHidden = false,
+            HelpTopic = "")]
+
+        public static string[,] BesaJseBondResults(
+
+            [ExcelArgument(Description = "The underlying bond.")]
+            BesaJseBond besaJseBond,
+            [ExcelArgument(Description = "The settlement date of the bond.")]
+            Date settleDate,
+            [ExcelArgument(Description = "The yield to maturity of the bond.")]
+            double ytm)
+
+        {
+            var results = besaJseBond.GetSpotMeasures(settleDate, ytm);
+            string[,] measures = { {"roundedAip", results.GetScalar(BesaJseBondEx.Keys.RoundedAip).ToString()}, {"unroundedAip", results.GetScalar(BesaJseBondEx.Keys.UnroundedAip).ToString()},
+                {"roundedClean", results.GetScalar(BesaJseBondEx.Keys.RoundedClean).ToString()},{"unroundedClean", results.GetScalar(BesaJseBondEx.Keys.UnroundedClean).ToString()},
+                {"unroundedAccrued", results.GetScalar(BesaJseBondEx.Keys.UnroundedAccrued).ToString()} };
+
+            return measures;
         }
     }
 }
