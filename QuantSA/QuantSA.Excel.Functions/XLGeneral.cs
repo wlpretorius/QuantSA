@@ -272,5 +272,49 @@ namespace QuantSA.ExcelFunctions
             var discountFactor = Math.Exp(-repo * timeToMaturity);
             return discountFactor;
         }
+
+        [QuantSAExcelFunction(
+                    Description = "Create a Besa JSE CPI Linked Bond.",
+                    Name = "QSA.CreateBesaJSECPIBond",
+                    HasGeneratedVersion = true,
+                    ExampleSheet = "BesaJSECPIBond.xlsx",
+                    Category = "QSA.General",
+                    IsHidden = false,
+                    HelpTopic = "")]
+        public static BesaJseCPIBond CreateBesaJseCPIBond(
+            [ExcelArgument(Description = "The underlying bond.")]
+            BesaJseBond besaJseBond,
+            [ExcelArgument(Description = "The base CPI value from the JSE.")]
+            double baseCpi,
+            [ExcelArgument(Description = "The CPI value 4 months back.")]
+            double cpiM4,
+            [ExcelArgument(Description = "The CPI value 3 months back.")]
+            double cpiM3,
+            [ExcelArgument(Description = "The settlement date of the bond.")]
+                    Date settleDate)
+        {
+            return new BesaJseCPIBond(besaJseBond, baseCpi, cpiM4, cpiM3, settleDate);
+        }
+
+        [QuantSAExcelFunction(
+            Description = "Returns the bond price of a Besa JSE CPI Linked Bond.",
+            Name = "QSA.BesaJSECPIBondPrice",
+            HasGeneratedVersion = true,
+            ExampleSheet = "BesaJSECPIBond.xlsx",
+            Category = "QSA.General",
+            IsHidden = false,
+            HelpTopic = "")]
+
+        public static double BesaJSECPIBondPrice(
+            [ExcelArgument(Description = "The underlying bond.")]
+                    BesaJseCPIBond besaJseCPIBond,
+            [ExcelArgument(Description = "The base CPI value from the JSE.")]
+                    double baseCpi,
+            [ExcelArgument(Description = "The yield to maturity of the bond.")]
+                    double ytm)
+        {
+            var result = (double)BesaJseCPIBondEx.GetCPISpotMeasures(besaJseCPIBond, baseCpi, ytm).GetScalar(BesaJseCPIBondEx.Keys.GetCPISpotMeasures);
+            return result;
+        }
     }
 }
