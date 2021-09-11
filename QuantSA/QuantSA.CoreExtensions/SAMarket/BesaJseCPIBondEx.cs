@@ -7,20 +7,32 @@ namespace QuantSA.CoreExtensions.SAMarket
 {
     public static class BesaJseCPIBondEx
     {
-        private static double GetCPIAtSettlementDate(BesaJseCPIBond besaJseCPIBond, double cpiM4, double cpiM3)
+        private static double GetCPIAtIssueDate(BesaJseCPIBond besaJseCPIBond, double[] cpiIssue)
+        {
+            var theIssueDate = new Date(besaJseCPIBond.issueDate.Year, besaJseCPIBond.issueDate.Month, besaJseCPIBond.issueDate.Day);
+            var actualDayInMonth = theIssueDate.Day;
+            var noDaysInMonth = Date.DaysInMonth(besaJseCPIBond.issueDate.Year, besaJseCPIBond.issueDate.Month);
+
+            var cpiAtIssue_M4 = (double)(noDaysInMonth - actualDayInMonth + 1) / noDaysInMonth * cpiIssue[0];
+            var cpiAtIssue_M3 = (double)(actualDayInMonth - 1) / noDaysInMonth * cpiIssue[1];
+            var cpiAtIssueDate = cpiAtIssue_M4 + cpiAtIssue_M3;
+
+            return cpiAtIssueDate;
+        }
+        private static double GetCPIAtSettlementDate(BesaJseCPIBond besaJseCPIBond, double[] cpiSettlement)
         {
             var theSettlementDate = new Date(besaJseCPIBond.settleDate.Year, besaJseCPIBond.settleDate.Month, besaJseCPIBond.settleDate.Day);
             var actualDayInMonth = theSettlementDate.Day;
             var noDaysInMonth = Date.DaysInMonth(besaJseCPIBond.settleDate.Year, besaJseCPIBond.settleDate.Month);
 
-            var cpiAtSettlementDate_M4 = (double)(noDaysInMonth - actualDayInMonth + 1) / noDaysInMonth * cpiM4;
-            var cpiAtSettlementDate_M3 = (double)(actualDayInMonth - 1) / noDaysInMonth * cpiM3;
+            var cpiAtSettlementDate_M4 = (double)(noDaysInMonth - actualDayInMonth + 1) / noDaysInMonth * cpiSettlement[0];
+            var cpiAtSettlementDate_M3 = (double)(actualDayInMonth - 1) / noDaysInMonth * cpiSettlement[1];
             var cpiAtSettlementDate = cpiAtSettlementDate_M4 + cpiAtSettlementDate_M3;
 
             return cpiAtSettlementDate;
         }
 
-        public static ResultStore GetCPISpotMeasures(BesaJseCPIBond besaJseCPIBond, double baseCpi, double ytm)
+        public static ResultStore GetCPISpotMeasures(BesaJseCPIBond besaJseCPIBond, double[] cpiIssue, double ytm, double[] cpiSettlement)
         {
             // Get the all-in price of underlying bond
             var settleDate = besaJseCPIBond.settleDate;
@@ -28,9 +40,7 @@ namespace QuantSA.CoreExtensions.SAMarket
             var Aip = (double)results.GetScalar(BesaJseBondEx.Keys.RoundedAip);
 
             // Calculate index-ratio
-            var cpiM4 = besaJseCPIBond.cpiM4;
-            var cpiM3 = besaJseCPIBond.cpiM3;
-            var indexRatio = (double)GetCPIAtSettlementDate(besaJseCPIBond, cpiM4, cpiM3) / baseCpi;
+            var indexRatio = (double)GetCPIAtSettlementDate(besaJseCPIBond, cpiSettlement) / GetCPIAtIssueDate(besaJseCPIBond, cpiIssue);
 
             // Get the all-in price of underlying index-linked bond
             var AipCpi = Math.Round(Aip * indexRatio, 5);

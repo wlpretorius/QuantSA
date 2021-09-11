@@ -10,28 +10,6 @@ namespace QuantSA.CoreExtensions.Test.SAMarket
     public class BesaJseCPIBondTest
     {
         [TestMethod]
-        public void TestAllInPrice()
-        {
-            var settleDate = new Date(2020, 12, 23);
-            var maturityDate = new Date(2025, 1, 31);
-            var notional = 1000000.0;
-            var annualCouponRate = 0.02;
-            var couponMonth1 = 1;
-            var couponDay1 = 31;
-            var couponMonth2 = 7;
-            var couponDay2 = 31;
-            var booksCloseDateDays = 21;
-            var zaCalendar = new Calendar("Test");
-            var bondI2025 = new BesaJseBond(maturityDate, notional, annualCouponRate, couponMonth1,
-                couponDay1, couponMonth2, couponDay2, booksCloseDateDays, zaCalendar, TestHelpers.ZAR);
-
-            var ytm = 0.027;
-
-            var results = bondI2025.GetSpotMeasures(settleDate, ytm);
-            Assert.AreEqual(98.08354, (double)results.GetScalar(BesaJseBondEx.Keys.RoundedAip), 1e-8);
-        }
-
-        [TestMethod]
         public void TestAllInCPIPrice()
         {
             var settleDate = new Date(2020, 12, 23);
@@ -49,14 +27,15 @@ namespace QuantSA.CoreExtensions.Test.SAMarket
 
             var ytm = 0.027;
 
-            var baseCpi = 77.62806717;
-            var cpiM4 = 116.6;
-            var cpiM3 = 116.8;
+            var issueDate = new Date(2012, 07, 04);
 
-            var cpiBondI2025 = new BesaJseCPIBond(bondI2025, baseCpi, cpiM4, cpiM3, settleDate);
+            double[] cpiIssue = { 77.6, 77.9 };
+            double[] cpiSettlement = { 116.6, 116.8 };
 
-            var results = BesaJseCPIBondEx.GetCPISpotMeasures(cpiBondI2025, baseCpi, ytm);
-            Assert.AreEqual(147.50415, (double)results.GetScalar(BesaJseCPIBondEx.Keys.GetCPISpotMeasures), 1e-8);
+            var cpiBondI2025 = new BesaJseCPIBond(bondI2025, settleDate, issueDate, cpiSettlement, cpiIssue);
+
+            var results = BesaJseCPIBondEx.GetCPISpotMeasures(cpiBondI2025, cpiIssue, ytm, cpiSettlement);
+            Assert.AreEqual(147.50232, (double)results.GetScalar(BesaJseCPIBondEx.Keys.GetCPISpotMeasures), 1e-6);
         }
     }
 }

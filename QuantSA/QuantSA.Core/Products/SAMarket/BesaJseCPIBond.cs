@@ -15,32 +15,39 @@ namespace QuantSA.Core.Products.SAMarket
         public BesaJseBond underlyingBond;
 
         /// <summary>
-        /// The inflation index (CPI) for the required date. This will be CPI(m-4) and CPI(m-3) according 
-        /// to the JSE CPI Pricing Formula. The Base CPI Value is given by the JSE Calculator and the CPI index
-        /// values are given by STATSSA. The user will provide the 3 CPI values. From this the CPI at settlement date
-        /// will be calculator in order to price the index-linked bond. The CPI value published for any given month, 
+        /// The inflation index (CPI) for the required Settlement date. The inflation figure applicable to any
+        /// particular settlement date will be based on the interpolated CPI figures looking back 4 months
+        /// and 3 months respectively.The CPI value published for any given month, 
         /// represents the index value on the first day of the month 4 months later. 
         /// This is known as lagged indexation and is needed so that cash flows on payment dates can be computed. 
-        /// The index value for dates between the first of a month (CPI at settlement date) are obtained using linear interpolation.
+        /// [0] = Month 4
+        /// [1] = Month 3
         /// </summary>
-        public double cpiM4, cpiM3;
+        public double[] cpiSettlement;
 
         /// <summary>
-        /// The CPI value for a particular month is only published in the following month. 
-        /// For example, the July CPI index number is only published in August and the August number in September. 
+        /// The inflation index (CPI) for the required Issue date. 
+        /// The methodology for determining the Reference CPI for the inflation linked bond on issue
+        /// date is exactly the same as that for any other date.
+        /// The Index Ratio is calculated by dividing the Reference CPI for the settlement date by the
+        /// Reference CPI for the issue date. This ratio is multiplied by the BesaJseBondPrice to obtain the final Inflation-Linked price.
+        /// [0] = Month 4
+        /// [1] = Month 3
         /// </summary>
-        public double baseCpi;
+        public double[] cpiIssue;
 
         public Date settleDate;
 
-        public BesaJseCPIBond(BesaJseBond besaJseBond, double baseCpi, double cpiM4, double cpiM3, Date settleDate)
+        public Date issueDate;
+
+        public BesaJseCPIBond(BesaJseBond besaJseBond, Date settleDate, Date issueDate, double[] cpiSettlement, double[] cpiIssue)
         {
 
             underlyingBond = besaJseBond;
-            this.cpiM4 = cpiM4;
-            this.cpiM3 = cpiM3;
-            this.baseCpi = baseCpi;
             this.settleDate = settleDate;
+            this.issueDate = issueDate;
+            this.cpiSettlement = cpiSettlement;
+            this.cpiIssue = cpiIssue;
         }
 
         public override List<Cashflow> GetCFs()
