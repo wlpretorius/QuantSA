@@ -6,7 +6,7 @@ using QuantSA.Shared.Primitives;
 namespace QuantSA.Core.Products.SAMarket
 {
     /// <summary>
-    /// The market standard bond traded on the JSE, formerly the BESA.
+    /// The market standard bond traded on the JSE, formerly the BESA
     /// </summary>
     public class BesaJseBond : ProductWrapper
     {
